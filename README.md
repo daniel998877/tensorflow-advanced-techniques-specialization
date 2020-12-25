@@ -1,2 +1,2 @@
-# tensorflow-advanced-techniques-specialization
+# Tensorflow Advanced Techniques Specialization
 Coursera Advanced Machine Learning Specialization
