@@ -1,0 +1,2300 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "ZL_6GK8qX35J"
+   },
+   "source": [
+    "\n",
+    "\n",
+    "# Week 1: Multiple Output Models using the Keras Functional API\n",
+    "\n",
+    "Welcome to the first programming assignment of the course! Your task will be to use the Keras functional API to train a model to predict two outputs. For this lab, you will use the **[Wine Quality Dataset](https://archive.ics.uci.edu/ml/datasets/Wine+Quality)** from the **UCI machine learning repository**. It has separate datasets for red wine and white wine.\n",
+    "\n",
+    "Normally, the wines are classified into one of the quality ratings specified in the attributes. In this exercise, you will combine the two datasets to predict the wine quality and whether the wine is red or white solely from the attributes. \n",
+    "\n",
+    "You will model wine quality estimations as a regression problem and wine type detection as a binary classification problem.\n",
+    "\n",
+    "#### Please complete sections that are marked **(TODO)**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "obdcD6urYBY9"
+   },
+   "source": [
+    "## Imports"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "t8N3pcTQ5oQI"
+   },
+   "outputs": [],
+   "source": [
+    "import tensorflow as tf\n",
+    "from tensorflow.keras.models import Model\n",
+    "from tensorflow.keras.layers import Dense, Input\n",
+    "\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import pandas as pd\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.metrics import confusion_matrix\n",
+    "import itertools\n",
+    "\n",
+    "import utils"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "gQMERzWQYpgm"
+   },
+   "source": [
+    "## Load Dataset\n",
+    "\n",
+    "\n",
+    "You will now download the dataset from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/index.php). \n",
+    "\n",
+    "### Pre-process the white wine dataset (TODO)\n",
+    "You will add a new column named `is_red` in your dataframe to indicate if the wine is white or red. \n",
+    "- In the white wine dataset, you will fill the column `is_red` with  zeros (0)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "2qYAjKXCd4RH",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "cb9f284ba6255170fe04a309a407d72d",
+     "grade": false,
+     "grade_id": "cell-e5bfa0f152d9a21f",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # URL of the white wine dataset\n",
+    "URL = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv'\n",
+    "\n",
+    "# # load the dataset from the URL\n",
+    "white_df = pd.read_csv(URL, sep=\";\")\n",
+    "\n",
+    "# # fill the `is_red` column with zeros.\n",
+    "white_df[\"is_red\"] = 0\n",
+    "\n",
+    "# # keep only the first of duplicate items\n",
+    "white_df = white_df.drop_duplicates(keep='first')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "defe38d6ec58fd31cd67b89e46c4373f",
+     "grade": true,
+     "grade_id": "cell-30575e713b55fc51",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "# You can click `File -> Open` in the menu above and open the `utils.py` file \n",
+    "# in case you want to inspect the unit tests being used for each graded function.\n",
+    "\n",
+    "utils.test_white_df(white_df)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "OQHK0ohBQRCk"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "8.8\n",
+      "9.1\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(white_df.alcohol[0])\n",
+    "print(white_df.alcohol[100])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# 8.8\n",
+    "# 9.1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Pre-process the red wine dataset (TODO)\n",
+    "- In the red wine dataset, you will fill in the column `is_red` with ones (1)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "8y3QxKwBed8v",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "be72275f78e2c2d0038dde9aa63f8d4f",
+     "grade": false,
+     "grade_id": "cell-e47a40f306593274",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # URL of the red wine dataset\n",
+    "URL = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'\n",
+    "\n",
+    "# # load the dataset from the URL\n",
+    "red_df = pd.read_csv(URL, sep=\";\")\n",
+    "\n",
+    "# # fill the `is_red` column with ones.\n",
+    "red_df[\"is_red\"] = 1\n",
+    "\n",
+    "# # keep only the first of duplicate items\n",
+    "red_df = red_df.drop_duplicates(keep='first')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "d8e0c91b0fd668b63ba74a8f2f958b59",
+     "grade": true,
+     "grade_id": "cell-2a75937adcc0c25b",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_red_df(red_df)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "zsB3LUzNQpo_"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "9.4\n",
+      "10.2\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(red_df.alcohol[0])\n",
+    "print(red_df.alcohol[100])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# 9.4\n",
+    "# 10.2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "2G8B-NYuM6-f"
+   },
+   "source": [
+    "### Concatenate the datasets\n",
+    "\n",
+    "Next, concatenate the red and white wine dataframes."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "YpQrOjJbfN3m"
+   },
+   "outputs": [],
+   "source": [
+    "df = pd.concat([red_df, white_df], ignore_index=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "Se2dTmThQyjb"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "9.4\n",
+      "9.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df.alcohol[0])\n",
+    "print(df.alcohol[100])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# 9.4\n",
+    "# 9.5"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "wx6y3rPpQv4k"
+   },
+   "outputs": [],
+   "source": [
+    "# NOTE: In a real-world scenario, you should shuffle the data.\n",
+    "# YOU ARE NOT going to do that here because we want to test\n",
+    "# with deterministic data. But if you want the code to do it,\n",
+    "# it's in the commented line below:\n",
+    "\n",
+    "#df = df.iloc[np.random.permutation(len(df))]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "-EqIcbg5M_n1"
+   },
+   "source": [
+    "This will chart the quality of the wines."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "IsvK0-Sgy17C"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "df['quality'].hist(bins=20);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "Nut1rmYLzf-p"
+   },
+   "source": [
+    "### Imbalanced data (TODO)\n",
+    "You can see from the plot above that the wine quality dataset is imbalanced. \n",
+    "- Since there are very few observations with quality equal to 3, 4, 8 and 9, you can drop these observations from your dataset. \n",
+    "- You can do this by removing data belonging to all classes except those > 4 and < 8."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 56,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "doH9_-gnf3sz",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "d9ba9fc3a3ca02ccc567be33652b80fe",
+     "grade": false,
+     "grade_id": "cell-6a3e9db696f6827b",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # get data with wine quality greater than 4 and less than 8\n",
+    "df = df[(df['quality'] > 4) & (df['quality'] < 8 )]\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # reset index and drop the old one\n",
+    "df = df.reset_index(drop=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 57,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "281e1d86a4803560ed5892cd7eda4c01",
+     "grade": true,
+     "grade_id": "cell-aed3da719d4682c7",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_df_drop(df)\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 58,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "xNR1iAlMRPXO"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "9.4\n",
+      "10.9\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df.alcohol[0])\n",
+    "print(df.alcohol[100])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# 9.4\n",
+    "# 10.9"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "cwhuRpnVRTzG"
+   },
+   "source": [
+    "You can plot again to see the new range of data and quality"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 59,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "857ygzZiLgGg"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "df['quality'].hist(bins=20);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "n3k0vqSsp84t"
+   },
+   "source": [
+    "### Train Test Split (TODO)\n",
+    "\n",
+    "Next, you can split the datasets into training, test and validation datasets.\n",
+    "- The data frame should be split 80:20 into `train` and `test` sets.\n",
+    "- The resulting `train` should then be split 80:20 into `train` and `val` sets.\n",
+    "- The `train_test_split` parameter `test_size` takes a float value that ranges between 0. and 1, and represents the proportion of the dataset that is allocated to the test set.  The rest of the data is allocated to the training set."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "PAVIf2-fgRVY",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "7f5738f4fb51d65adc9a8acbdf2b9970",
+     "grade": false,
+     "grade_id": "cell-91946cadf745206b",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "## Please do not change the random_state parameter. This is needed for grading.\n",
+    "\n",
+    "# # split df into 80:20 train and test sets\n",
+    "train, test = train_test_split(df, test_size= 0.2, random_state = 1)\n",
+    "                               \n",
+    "# # split train into 80:20 train and val sets\n",
+    "train, val = train_test_split(train, test_size=0.2, random_state = 1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "editable": false,
+    "id": "57h9LcEzRWpk",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "42adbe9e66efac7c7a5f8cd73ac92f22",
+     "grade": true,
+     "grade_id": "cell-64b8b38cd0b965f6",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_data_sizes(train.size, test.size, val.size)\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "RwTNu4KFqG-K"
+   },
+   "source": [
+    "Here's where you can explore the training stats. You can pop the labels 'is_red' and 'quality' from the data as these will be used as the labels\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "Y_afyhhHM6WQ"
+   },
+   "outputs": [],
+   "source": [
+    "train_stats = train.describe()\n",
+    "train_stats.pop('is_red')\n",
+    "train_stats.pop('quality')\n",
+    "train_stats = train_stats.transpose()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "ahvbYm4fNqSt"
+   },
+   "source": [
+    "Explore the training stats!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 66,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "n_gAtPjZ0otF"
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>count</th>\n",
+       "      <th>mean</th>\n",
+       "      <th>std</th>\n",
+       "      <th>min</th>\n",
+       "      <th>25%</th>\n",
+       "      <th>50%</th>\n",
+       "      <th>75%</th>\n",
+       "      <th>max</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>fixed acidity</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>7.221616</td>\n",
+       "      <td>1.325297</td>\n",
+       "      <td>3.80000</td>\n",
+       "      <td>6.40000</td>\n",
+       "      <td>7.00000</td>\n",
+       "      <td>7.7000</td>\n",
+       "      <td>15.60000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>volatile acidity</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>0.338929</td>\n",
+       "      <td>0.162476</td>\n",
+       "      <td>0.08000</td>\n",
+       "      <td>0.23000</td>\n",
+       "      <td>0.29000</td>\n",
+       "      <td>0.4000</td>\n",
+       "      <td>1.24000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>citric acid</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>0.321569</td>\n",
+       "      <td>0.147970</td>\n",
+       "      <td>0.00000</td>\n",
+       "      <td>0.25000</td>\n",
+       "      <td>0.31000</td>\n",
+       "      <td>0.4000</td>\n",
+       "      <td>1.66000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>residual sugar</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>5.155911</td>\n",
+       "      <td>4.639632</td>\n",
+       "      <td>0.60000</td>\n",
+       "      <td>1.80000</td>\n",
+       "      <td>2.80000</td>\n",
+       "      <td>7.6500</td>\n",
+       "      <td>65.80000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>chlorides</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>0.056976</td>\n",
+       "      <td>0.036802</td>\n",
+       "      <td>0.01200</td>\n",
+       "      <td>0.03800</td>\n",
+       "      <td>0.04700</td>\n",
+       "      <td>0.0660</td>\n",
+       "      <td>0.61100</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>free sulfur dioxide</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>30.388590</td>\n",
+       "      <td>17.236784</td>\n",
+       "      <td>1.00000</td>\n",
+       "      <td>17.00000</td>\n",
+       "      <td>28.00000</td>\n",
+       "      <td>41.0000</td>\n",
+       "      <td>131.00000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>total sulfur dioxide</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>115.062282</td>\n",
+       "      <td>56.706617</td>\n",
+       "      <td>6.00000</td>\n",
+       "      <td>75.00000</td>\n",
+       "      <td>117.00000</td>\n",
+       "      <td>156.0000</td>\n",
+       "      <td>344.00000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>density</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>0.994633</td>\n",
+       "      <td>0.003005</td>\n",
+       "      <td>0.98711</td>\n",
+       "      <td>0.99232</td>\n",
+       "      <td>0.99481</td>\n",
+       "      <td>0.9968</td>\n",
+       "      <td>1.03898</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>pH</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>3.223201</td>\n",
+       "      <td>0.161272</td>\n",
+       "      <td>2.72000</td>\n",
+       "      <td>3.11000</td>\n",
+       "      <td>3.21000</td>\n",
+       "      <td>3.3300</td>\n",
+       "      <td>4.01000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>sulphates</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>0.534051</td>\n",
+       "      <td>0.149149</td>\n",
+       "      <td>0.22000</td>\n",
+       "      <td>0.43000</td>\n",
+       "      <td>0.51000</td>\n",
+       "      <td>0.6000</td>\n",
+       "      <td>1.95000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>alcohol</th>\n",
+       "      <td>3155.0</td>\n",
+       "      <td>10.504466</td>\n",
+       "      <td>1.154654</td>\n",
+       "      <td>8.50000</td>\n",
+       "      <td>9.50000</td>\n",
+       "      <td>10.30000</td>\n",
+       "      <td>11.3000</td>\n",
+       "      <td>14.00000</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                       count        mean        std      min       25%  \\\n",
+       "fixed acidity         3155.0    7.221616   1.325297  3.80000   6.40000   \n",
+       "volatile acidity      3155.0    0.338929   0.162476  0.08000   0.23000   \n",
+       "citric acid           3155.0    0.321569   0.147970  0.00000   0.25000   \n",
+       "residual sugar        3155.0    5.155911   4.639632  0.60000   1.80000   \n",
+       "chlorides             3155.0    0.056976   0.036802  0.01200   0.03800   \n",
+       "free sulfur dioxide   3155.0   30.388590  17.236784  1.00000  17.00000   \n",
+       "total sulfur dioxide  3155.0  115.062282  56.706617  6.00000  75.00000   \n",
+       "density               3155.0    0.994633   0.003005  0.98711   0.99232   \n",
+       "pH                    3155.0    3.223201   0.161272  2.72000   3.11000   \n",
+       "sulphates             3155.0    0.534051   0.149149  0.22000   0.43000   \n",
+       "alcohol               3155.0   10.504466   1.154654  8.50000   9.50000   \n",
+       "\n",
+       "                            50%       75%        max  \n",
+       "fixed acidity           7.00000    7.7000   15.60000  \n",
+       "volatile acidity        0.29000    0.4000    1.24000  \n",
+       "citric acid             0.31000    0.4000    1.66000  \n",
+       "residual sugar          2.80000    7.6500   65.80000  \n",
+       "chlorides               0.04700    0.0660    0.61100  \n",
+       "free sulfur dioxide    28.00000   41.0000  131.00000  \n",
+       "total sulfur dioxide  117.00000  156.0000  344.00000  \n",
+       "density                 0.99481    0.9968    1.03898  \n",
+       "pH                      3.21000    3.3300    4.01000  \n",
+       "sulphates               0.51000    0.6000    1.95000  \n",
+       "alcohol                10.30000   11.3000   14.00000  "
+      ]
+     },
+     "execution_count": 66,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "train_stats"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "bGPvt9jir_HC"
+   },
+   "source": [
+    "### Get the labels (TODO)\n",
+    "\n",
+    "The features and labels are currently in the same dataframe.\n",
+    "- You will want to store the label columns `is_red` and `quality` separately from the feature columns.  \n",
+    "- The following function, `format_output`, gets these two columns from the dataframe (it's given to you).\n",
+    "- `format_output` also formats the data into numpy arrays. \n",
+    "- Please use the `format_output` and apply it to the `train`, `val` and `test` sets to get dataframes for the labels."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 67,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "Z_fs14XQqZVP"
+   },
+   "outputs": [],
+   "source": [
+    "def format_output(data):\n",
+    "    is_red = data.pop('is_red')\n",
+    "    is_red = np.array(is_red)\n",
+    "    quality = data.pop('quality') \n",
+    "    quality = np.array(quality)\n",
+    "    return (quality, is_red)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 68,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "8L3ZZe1fQicm",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "7a86809e54895a816434c48dc903f55d",
+     "grade": false,
+     "grade_id": "cell-5c30fa2c2a354b0f",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # format the output of the train set\n",
+    "train_Y = format_output(train)\n",
+    "\n",
+    "# # format the output of the val set\n",
+    "val_Y = format_output(val)\n",
+    "    \n",
+    "# # format the output of the test set\n",
+    "test_Y = format_output(test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 69,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "359cabbafaed14ec9bbc1e57a7b6f32c",
+     "grade": true,
+     "grade_id": "cell-4977d8befb80f56b",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_format_output(df, train_Y, val_Y, test_Y)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that after you get the labels, the `train`, `val` and `test` dataframes no longer contain the label columns, and contain just the feature columns.\n",
+    "- This is because you used `.pop` in the `format_output` function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 70,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>fixed acidity</th>\n",
+       "      <th>volatile acidity</th>\n",
+       "      <th>citric acid</th>\n",
+       "      <th>residual sugar</th>\n",
+       "      <th>chlorides</th>\n",
+       "      <th>free sulfur dioxide</th>\n",
+       "      <th>total sulfur dioxide</th>\n",
+       "      <th>density</th>\n",
+       "      <th>pH</th>\n",
+       "      <th>sulphates</th>\n",
+       "      <th>alcohol</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>225</th>\n",
+       "      <td>7.5</td>\n",
+       "      <td>0.65</td>\n",
+       "      <td>0.18</td>\n",
+       "      <td>7.0</td>\n",
+       "      <td>0.088</td>\n",
+       "      <td>27.0</td>\n",
+       "      <td>94.0</td>\n",
+       "      <td>0.99915</td>\n",
+       "      <td>3.38</td>\n",
+       "      <td>0.77</td>\n",
+       "      <td>9.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3557</th>\n",
+       "      <td>6.3</td>\n",
+       "      <td>0.27</td>\n",
+       "      <td>0.29</td>\n",
+       "      <td>12.2</td>\n",
+       "      <td>0.044</td>\n",
+       "      <td>59.0</td>\n",
+       "      <td>196.0</td>\n",
+       "      <td>0.99782</td>\n",
+       "      <td>3.14</td>\n",
+       "      <td>0.40</td>\n",
+       "      <td>8.8</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3825</th>\n",
+       "      <td>8.8</td>\n",
+       "      <td>0.27</td>\n",
+       "      <td>0.25</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.024</td>\n",
+       "      <td>52.0</td>\n",
+       "      <td>99.0</td>\n",
+       "      <td>0.99250</td>\n",
+       "      <td>2.87</td>\n",
+       "      <td>0.49</td>\n",
+       "      <td>11.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1740</th>\n",
+       "      <td>6.4</td>\n",
+       "      <td>0.45</td>\n",
+       "      <td>0.07</td>\n",
+       "      <td>1.1</td>\n",
+       "      <td>0.030</td>\n",
+       "      <td>10.0</td>\n",
+       "      <td>131.0</td>\n",
+       "      <td>0.99050</td>\n",
+       "      <td>2.97</td>\n",
+       "      <td>0.28</td>\n",
+       "      <td>10.8</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1221</th>\n",
+       "      <td>7.2</td>\n",
+       "      <td>0.53</td>\n",
+       "      <td>0.13</td>\n",
+       "      <td>2.0</td>\n",
+       "      <td>0.058</td>\n",
+       "      <td>18.0</td>\n",
+       "      <td>22.0</td>\n",
+       "      <td>0.99573</td>\n",
+       "      <td>3.21</td>\n",
+       "      <td>0.68</td>\n",
+       "      <td>9.9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      fixed acidity  volatile acidity  citric acid  residual sugar  chlorides  \\\n",
+       "225             7.5              0.65         0.18             7.0      0.088   \n",
+       "3557            6.3              0.27         0.29            12.2      0.044   \n",
+       "3825            8.8              0.27         0.25             5.0      0.024   \n",
+       "1740            6.4              0.45         0.07             1.1      0.030   \n",
+       "1221            7.2              0.53         0.13             2.0      0.058   \n",
+       "\n",
+       "      free sulfur dioxide  total sulfur dioxide  density    pH  sulphates  \\\n",
+       "225                  27.0                  94.0  0.99915  3.38       0.77   \n",
+       "3557                 59.0                 196.0  0.99782  3.14       0.40   \n",
+       "3825                 52.0                  99.0  0.99250  2.87       0.49   \n",
+       "1740                 10.0                 131.0  0.99050  2.97       0.28   \n",
+       "1221                 18.0                  22.0  0.99573  3.21       0.68   \n",
+       "\n",
+       "      alcohol  \n",
+       "225       9.4  \n",
+       "3557      8.8  \n",
+       "3825     11.4  \n",
+       "1740     10.8  \n",
+       "1221      9.9  "
+      ]
+     },
+     "execution_count": 70,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "train.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "hEdbrruAsN1D"
+   },
+   "source": [
+    "### Normalize the data (TODO)\n",
+    "\n",
+    "Next, you can normalize the data, x, using the formula:\n",
+    "$$x_{norm} = \\frac{x - \\mu}{\\sigma}$$\n",
+    "- The `norm` function is defined for you.\n",
+    "- Please apply the `norm` function to normalize the dataframes that contains the feature columns of `train`, `val` and `test` sets."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 74,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "WWiZPAHCLjUs"
+   },
+   "outputs": [],
+   "source": [
+    "def norm(x):\n",
+    "    return (x - train_stats['mean']) / train_stats['std']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 75,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "JEaOi2I2Lk69",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "6bc0cdcb563d192f271067aa3373ff32",
+     "grade": false,
+     "grade_id": "cell-d8416d975c371095",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "# # normalize the train set\n",
+    "norm_train_X = norm(train)\n",
+    "    \n",
+    "# # normalize the val set\n",
+    "norm_val_X = norm(val)\n",
+    "    \n",
+    "# # normalize the test set\n",
+    "norm_test_X = norm(test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 76,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "4f567db45bf40191601780379cc100b8",
+     "grade": true,
+     "grade_id": "cell-97fad979d157529b",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_norm(norm_train_X, norm_val_X, norm_test_X, train, val, test)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "hzykDwQhsaPO"
+   },
+   "source": [
+    "## Define the Model (TODO)\n",
+    "\n",
+    "Define the model using the functional API. The base model will be 2 `Dense` layers of 128 neurons each, and have the `'relu'` activation.\n",
+    "- Check out the documentation for [tf.keras.layers.Dense](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 77,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "Rhcns3oTFkM6",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "74b031247e569526552bf13a034a1c07",
+     "grade": false,
+     "grade_id": "cell-73fceedad1fe351c",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "def base_model(inputs):\n",
+    "    \n",
+    "#     # connect a Dense layer with 128 neurons and a relu activation\n",
+    "    x = Dense(units='128', activation='relu')(inputs)\n",
+    "    \n",
+    "#     # connect another Dense layer with 128 neurons and a relu activation\n",
+    "    x = Dense(units='128', activation='relu')(x)\n",
+    "    return x\n",
+    "  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "9255924b3def80f679616e4c851a43e1",
+     "grade": true,
+     "grade_id": "cell-54f742a133353d75",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_base_model(base_model)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "xem_fcVws6Kz"
+   },
+   "source": [
+    "# Define output layers of the model (TODO)\n",
+    "\n",
+    "You will add output layers to the base model. \n",
+    "- The model will need two outputs.\n",
+    "\n",
+    "One output layer will predict wine quality, which is a numeric value.\n",
+    "- Define a `Dense` layer with 1 neuron.\n",
+    "- Since this is a regression output, the activation can be left as its default value `None`.\n",
+    "\n",
+    "The other output layer will predict the wine type, which is either red `1` or not red `0` (white).\n",
+    "- Define a `Dense` layer with 1 neuron.\n",
+    "- Since there are two possible categories, you can use a sigmoid activation for binary classification.\n",
+    "\n",
+    "Define the `Model`\n",
+    "- Define the `Model` object, and set the following parameters:\n",
+    "  - `inputs`: pass in the inputs to the model as a list.\n",
+    "  - `outputs`: pass in a list of the outputs that you just defined: wine quality, then wine type.\n",
+    "  - **Note**: please list the wine quality before wine type in the outputs, as this will affect the calculated loss if you choose the other order."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 84,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "n5UGF8PMVLPt",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "76d35b90d20cdcbb22986cd8211057de",
+     "grade": false,
+     "grade_id": "cell-19e285f482f021fb",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "def final_model(inputs):\n",
+    "    \n",
+    "#     # get the base model\n",
+    "    x = base_model(inputs)\n",
+    "\n",
+    "#     # connect the output Dense layer for regression\n",
+    "    wine_quality = Dense(units='1', name='wine_quality')(x)\n",
+    "\n",
+    "#     # connect the output Dense layer for classification. this will use a sigmoid activation.\n",
+    "    wine_type = Dense(units='1', activation='sigmoid', name='wine_type')(x)\n",
+    "\n",
+    "#     # define the model using the input and output layers\n",
+    "    model = Model(inputs= inputs, outputs=[wine_quality,wine_type])\n",
+    "\n",
+    "    return model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 85,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "89cbf89d8ab5e2e59ecf7f63f517520a",
+     "grade": true,
+     "grade_id": "cell-40d050f855c817d1",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_final_model(final_model)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "5R0BMTsltZyu"
+   },
+   "source": [
+    "## Compiling the Model\n",
+    "\n",
+    "Next, compile the model. When setting the loss parameter of `model.compile`, you're setting the loss for each of the two outputs (wine quality and wine type).\n",
+    "\n",
+    "To set more than one loss, use a dictionary of key-value pairs.\n",
+    "- You can look at the docs for the losses [here](https://www.tensorflow.org/api_docs/python/tf/keras/losses#functions).\n",
+    "    - **Note**: For the desired spelling, please look at the \"Functions\" section of the documentation and not the \"classes\" section on that same page.\n",
+    "- wine_type: Since you will be performing binary classification on wine type, you should use the binary crossentropy loss function for it.  Please pass this in as a string.  \n",
+    "  - **Hint**, this should be all lowercase.  In the documentation, you'll see this under the \"Functions\" section, not the \"Classes\" section.\n",
+    "- wine_quality: since this is a regression output, use the mean squared error.  Please pass it in as a string, all lowercase.\n",
+    "  - **Hint**: You may notice that there are two aliases for mean squared error.  Please use the shorter name.\n",
+    "\n",
+    "\n",
+    "You will also set the metric for each of the two outputs.  Again, to set metrics for two or more outputs, use a dictionary with key value pairs.\n",
+    "- The metrics documentation is linked [here](https://www.tensorflow.org/api_docs/python/tf/keras/metrics).\n",
+    "- For the wine type, please set it to accuracy as a string, all lowercase.\n",
+    "- For wine quality, please use the root mean squared error.  Instead of a string, you'll set it to an instance of the class [RootMeanSquaredError](https://www.tensorflow.org/api_docs/python/tf/keras/metrics/RootMeanSquaredError), which belongs to the tf.keras.metrics module.\n",
+    "\n",
+    "**Note**: If you see the error message \n",
+    ">Exception: wine quality loss function is incorrect.\n",
+    "\n",
+    "- Please also check your other losses and metrics, as the error may be caused by the other three key-value pairs and not the wine quality loss."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "LK11duUbUjmh",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "22f45067ca69eb2ccadb43874dbcc27b",
+     "grade": false,
+     "grade_id": "cell-81afdc4dcca51d5e",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "inputs = tf.keras.layers.Input(shape=(11,))\n",
+    "rms = tf.keras.optimizers.RMSprop(lr=0.0001)\n",
+    "model = final_model(inputs)\n",
+    "\n",
+    "model.compile(optimizer=rms, \n",
+    "              loss = {'wine_type' : 'binary_crossentropy',\n",
+    "                      'wine_quality' : 'mse'\n",
+    "                     },\n",
+    "              metrics = {'wine_type' : 'accuracy',\n",
+    "                         'wine_quality': tf.keras.metrics.RootMeanSquaredError()\n",
+    "                       }\n",
+    "             )\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 87,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "88e02238ea5e456ff65e835cc8158054",
+     "grade": true,
+     "grade_id": "cell-2eeeba02391c4632",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_model_compile(model)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "90MpAMpWuKm-"
+   },
+   "source": [
+    "## Training the Model\n",
+    "\n",
+    "Fit the model to the training inputs and outputs. \n",
+    "- Check the documentation for [model.fit](https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit).\n",
+    "- Remember to use the normalized training set as inputs. \n",
+    "- For the validation data, please use the normalized validation set."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 88,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "deletable": false,
+    "id": "_eiZkle4XwiY",
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "2ca7664be03bfd6fd3651ae44d17b793",
+     "grade": false,
+     "grade_id": "cell-0bb56262896f6680",
+     "locked": false,
+     "schema_version": 3,
+     "solution": true,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train on 3155 samples, validate on 789 samples\n",
+      "Epoch 1/180\n",
+      "3155/3155 [==============================] - 1s 363us/sample - loss: 24.6152 - wine_quality_loss: 23.9955 - wine_type_loss: 0.5998 - wine_quality_root_mean_squared_error: 4.9006 - wine_type_accuracy: 0.7509 - val_loss: 16.7692 - val_wine_quality_loss: 16.2182 - val_wine_type_loss: 0.5698 - val_wine_quality_root_mean_squared_error: 4.0249 - val_wine_type_accuracy: 0.7516\n",
+      "Epoch 2/180\n",
+      "3155/3155 [==============================] - 0s 118us/sample - loss: 10.8237 - wine_quality_loss: 10.2754 - wine_type_loss: 0.5234 - wine_quality_root_mean_squared_error: 3.2094 - wine_type_accuracy: 0.7461 - val_loss: 6.1867 - val_wine_quality_loss: 5.7603 - val_wine_type_loss: 0.4854 - val_wine_quality_root_mean_squared_error: 2.3879 - val_wine_type_accuracy: 0.7376\n",
+      "Epoch 3/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 4.0836 - wine_quality_loss: 3.6599 - wine_type_loss: 0.4148 - wine_quality_root_mean_squared_error: 1.9154 - wine_type_accuracy: 0.8013 - val_loss: 2.8087 - val_wine_quality_loss: 2.5064 - val_wine_type_loss: 0.3598 - val_wine_quality_root_mean_squared_error: 1.5651 - val_wine_type_accuracy: 0.8720\n",
+      "Epoch 4/180\n",
+      "3155/3155 [==============================] - 0s 98us/sample - loss: 2.5668 - wine_quality_loss: 2.2704 - wine_type_loss: 0.2994 - wine_quality_root_mean_squared_error: 1.5057 - wine_type_accuracy: 0.9319 - val_loss: 2.2789 - val_wine_quality_loss: 2.0481 - val_wine_type_loss: 0.2647 - val_wine_quality_root_mean_squared_error: 1.4193 - val_wine_type_accuracy: 0.9645\n",
+      "Epoch 5/180\n",
+      "3155/3155 [==============================] - 0s 97us/sample - loss: 2.1584 - wine_quality_loss: 1.9278 - wine_type_loss: 0.2290 - wine_quality_root_mean_squared_error: 1.3892 - wine_type_accuracy: 0.9686 - val_loss: 1.9593 - val_wine_quality_loss: 1.7757 - val_wine_type_loss: 0.2055 - val_wine_quality_root_mean_squared_error: 1.3243 - val_wine_type_accuracy: 0.9797\n",
+      "Epoch 6/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 1.8838 - wine_quality_loss: 1.7064 - wine_type_loss: 0.1778 - wine_quality_root_mean_squared_error: 1.3061 - wine_type_accuracy: 0.9813 - val_loss: 1.7119 - val_wine_quality_loss: 1.5677 - val_wine_type_loss: 0.1590 - val_wine_quality_root_mean_squared_error: 1.2462 - val_wine_type_accuracy: 0.9835\n",
+      "Epoch 7/180\n",
+      "3155/3155 [==============================] - 0s 97us/sample - loss: 1.6728 - wine_quality_loss: 1.5296 - wine_type_loss: 0.1392 - wine_quality_root_mean_squared_error: 1.2382 - wine_type_accuracy: 0.9838 - val_loss: 1.5409 - val_wine_quality_loss: 1.4226 - val_wine_type_loss: 0.1270 - val_wine_quality_root_mean_squared_error: 1.1891 - val_wine_type_accuracy: 0.9861\n",
+      "Epoch 8/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 1.5208 - wine_quality_loss: 1.4165 - wine_type_loss: 0.1138 - wine_quality_root_mean_squared_error: 1.1861 - wine_type_accuracy: 0.9870 - val_loss: 1.4073 - val_wine_quality_loss: 1.3090 - val_wine_type_loss: 0.1034 - val_wine_quality_root_mean_squared_error: 1.1419 - val_wine_type_accuracy: 0.9861\n",
+      "Epoch 9/180\n",
+      "3155/3155 [==============================] - 0s 97us/sample - loss: 1.3935 - wine_quality_loss: 1.2982 - wine_type_loss: 0.0950 - wine_quality_root_mean_squared_error: 1.1395 - wine_type_accuracy: 0.9880 - val_loss: 1.3133 - val_wine_quality_loss: 1.2290 - val_wine_type_loss: 0.0871 - val_wine_quality_root_mean_squared_error: 1.1074 - val_wine_type_accuracy: 0.9873\n",
+      "Epoch 10/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 1.2950 - wine_quality_loss: 1.2145 - wine_type_loss: 0.0820 - wine_quality_root_mean_squared_error: 1.1013 - wine_type_accuracy: 0.9889 - val_loss: 1.2046 - val_wine_quality_loss: 1.1310 - val_wine_type_loss: 0.0756 - val_wine_quality_root_mean_squared_error: 1.0625 - val_wine_type_accuracy: 0.9886\n",
+      "Epoch 11/180\n",
+      "3155/3155 [==============================] - 0s 97us/sample - loss: 1.2046 - wine_quality_loss: 1.1307 - wine_type_loss: 0.0721 - wine_quality_root_mean_squared_error: 1.0642 - wine_type_accuracy: 0.9905 - val_loss: 1.1293 - val_wine_quality_loss: 1.0637 - val_wine_type_loss: 0.0662 - val_wine_quality_root_mean_squared_error: 1.0311 - val_wine_type_accuracy: 0.9899\n",
+      "Epoch 12/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 1.1223 - wine_quality_loss: 1.0564 - wine_type_loss: 0.0644 - wine_quality_root_mean_squared_error: 1.0284 - wine_type_accuracy: 0.9902 - val_loss: 1.0605 - val_wine_quality_loss: 1.0012 - val_wine_type_loss: 0.0592 - val_wine_quality_root_mean_squared_error: 1.0006 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 13/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 1.0550 - wine_quality_loss: 0.9967 - wine_type_loss: 0.0586 - wine_quality_root_mean_squared_error: 0.9982 - wine_type_accuracy: 0.9911 - val_loss: 0.9937 - val_wine_quality_loss: 0.9394 - val_wine_type_loss: 0.0543 - val_wine_quality_root_mean_squared_error: 0.9692 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 14/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.9865 - wine_quality_loss: 0.9322 - wine_type_loss: 0.0540 - wine_quality_root_mean_squared_error: 0.9656 - wine_type_accuracy: 0.9911 - val_loss: 0.9350 - val_wine_quality_loss: 0.8844 - val_wine_type_loss: 0.0498 - val_wine_quality_root_mean_squared_error: 0.9408 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 15/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.9249 - wine_quality_loss: 0.8770 - wine_type_loss: 0.0500 - wine_quality_root_mean_squared_error: 0.9353 - wine_type_accuracy: 0.9908 - val_loss: 0.8783 - val_wine_quality_loss: 0.8309 - val_wine_type_loss: 0.0463 - val_wine_quality_root_mean_squared_error: 0.9120 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 16/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.8733 - wine_quality_loss: 0.8248 - wine_type_loss: 0.0471 - wine_quality_root_mean_squared_error: 0.9089 - wine_type_accuracy: 0.9914 - val_loss: 0.8184 - val_wine_quality_loss: 0.7740 - val_wine_type_loss: 0.0437 - val_wine_quality_root_mean_squared_error: 0.8801 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 17/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.8269 - wine_quality_loss: 0.7837 - wine_type_loss: 0.0448 - wine_quality_root_mean_squared_error: 0.8844 - wine_type_accuracy: 0.9914 - val_loss: 0.7868 - val_wine_quality_loss: 0.7443 - val_wine_type_loss: 0.0413 - val_wine_quality_root_mean_squared_error: 0.8633 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 18/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.7791 - wine_quality_loss: 0.7389 - wine_type_loss: 0.0427 - wine_quality_root_mean_squared_error: 0.8582 - wine_type_accuracy: 0.9911 - val_loss: 0.7303 - val_wine_quality_loss: 0.6900 - val_wine_type_loss: 0.0396 - val_wine_quality_root_mean_squared_error: 0.8310 - val_wine_type_accuracy: 0.9911\n",
+      "Epoch 19/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.7388 - wine_quality_loss: 0.6981 - wine_type_loss: 0.0408 - wine_quality_root_mean_squared_error: 0.8355 - wine_type_accuracy: 0.9918 - val_loss: 0.6982 - val_wine_quality_loss: 0.6590 - val_wine_type_loss: 0.0381 - val_wine_quality_root_mean_squared_error: 0.8124 - val_wine_type_accuracy: 0.9924\n",
+      "Epoch 20/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.7013 - wine_quality_loss: 0.6616 - wine_type_loss: 0.0392 - wine_quality_root_mean_squared_error: 0.8136 - wine_type_accuracy: 0.9921 - val_loss: 0.6742 - val_wine_quality_loss: 0.6358 - val_wine_type_loss: 0.0369 - val_wine_quality_root_mean_squared_error: 0.7981 - val_wine_type_accuracy: 0.9924\n",
+      "Epoch 21/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.6644 - wine_quality_loss: 0.6262 - wine_type_loss: 0.0380 - wine_quality_root_mean_squared_error: 0.7914 - wine_type_accuracy: 0.9924 - val_loss: 0.6278 - val_wine_quality_loss: 0.5908 - val_wine_type_loss: 0.0359 - val_wine_quality_root_mean_squared_error: 0.7692 - val_wine_type_accuracy: 0.9924\n",
+      "Epoch 22/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.6338 - wine_quality_loss: 0.5961 - wine_type_loss: 0.0369 - wine_quality_root_mean_squared_error: 0.7725 - wine_type_accuracy: 0.9927 - val_loss: 0.6102 - val_wine_quality_loss: 0.5739 - val_wine_type_loss: 0.0350 - val_wine_quality_root_mean_squared_error: 0.7583 - val_wine_type_accuracy: 0.9937\n",
+      "Epoch 23/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.6049 - wine_quality_loss: 0.5683 - wine_type_loss: 0.0365 - wine_quality_root_mean_squared_error: 0.7542 - wine_type_accuracy: 0.9930 - val_loss: 0.5738 - val_wine_quality_loss: 0.5383 - val_wine_type_loss: 0.0343 - val_wine_quality_root_mean_squared_error: 0.7343 - val_wine_type_accuracy: 0.9937\n",
+      "Epoch 24/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.5780 - wine_quality_loss: 0.5422 - wine_type_loss: 0.0352 - wine_quality_root_mean_squared_error: 0.7367 - wine_type_accuracy: 0.9933 - val_loss: 0.5488 - val_wine_quality_loss: 0.5141 - val_wine_type_loss: 0.0336 - val_wine_quality_root_mean_squared_error: 0.7176 - val_wine_type_accuracy: 0.9962\n",
+      "Epoch 25/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.5543 - wine_quality_loss: 0.5215 - wine_type_loss: 0.0344 - wine_quality_root_mean_squared_error: 0.7210 - wine_type_accuracy: 0.9933 - val_loss: 0.5333 - val_wine_quality_loss: 0.4987 - val_wine_type_loss: 0.0331 - val_wine_quality_root_mean_squared_error: 0.7071 - val_wine_type_accuracy: 0.9962\n",
+      "Epoch 26/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.5362 - wine_quality_loss: 0.5027 - wine_type_loss: 0.0336 - wine_quality_root_mean_squared_error: 0.7089 - wine_type_accuracy: 0.9937 - val_loss: 0.5110 - val_wine_quality_loss: 0.4772 - val_wine_type_loss: 0.0326 - val_wine_quality_root_mean_squared_error: 0.6915 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 27/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.5153 - wine_quality_loss: 0.4814 - wine_type_loss: 0.0333 - wine_quality_root_mean_squared_error: 0.6944 - wine_type_accuracy: 0.9940 - val_loss: 0.4967 - val_wine_quality_loss: 0.4631 - val_wine_type_loss: 0.0323 - val_wine_quality_root_mean_squared_error: 0.6813 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 28/180\n",
+      "3155/3155 [==============================] - 0s 97us/sample - loss: 0.4956 - wine_quality_loss: 0.4647 - wine_type_loss: 0.0326 - wine_quality_root_mean_squared_error: 0.6805 - wine_type_accuracy: 0.9940 - val_loss: 0.4855 - val_wine_quality_loss: 0.4522 - val_wine_type_loss: 0.0318 - val_wine_quality_root_mean_squared_error: 0.6734 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 29/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.4813 - wine_quality_loss: 0.4495 - wine_type_loss: 0.0319 - wine_quality_root_mean_squared_error: 0.6703 - wine_type_accuracy: 0.9943 - val_loss: 0.4618 - val_wine_quality_loss: 0.4291 - val_wine_type_loss: 0.0313 - val_wine_quality_root_mean_squared_error: 0.6559 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 30/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.4661 - wine_quality_loss: 0.4349 - wine_type_loss: 0.0314 - wine_quality_root_mean_squared_error: 0.6593 - wine_type_accuracy: 0.9943 - val_loss: 0.4499 - val_wine_quality_loss: 0.4172 - val_wine_type_loss: 0.0311 - val_wine_quality_root_mean_squared_error: 0.6469 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 31/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.4544 - wine_quality_loss: 0.4240 - wine_type_loss: 0.0310 - wine_quality_root_mean_squared_error: 0.6506 - wine_type_accuracy: 0.9949 - val_loss: 0.4356 - val_wine_quality_loss: 0.4035 - val_wine_type_loss: 0.0308 - val_wine_quality_root_mean_squared_error: 0.6359 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 32/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.4427 - wine_quality_loss: 0.4115 - wine_type_loss: 0.0305 - wine_quality_root_mean_squared_error: 0.6420 - wine_type_accuracy: 0.9946 - val_loss: 0.4330 - val_wine_quality_loss: 0.4009 - val_wine_type_loss: 0.0306 - val_wine_quality_root_mean_squared_error: 0.6341 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 33/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.4309 - wine_quality_loss: 0.4011 - wine_type_loss: 0.0302 - wine_quality_root_mean_squared_error: 0.6330 - wine_type_accuracy: 0.9946 - val_loss: 0.4200 - val_wine_quality_loss: 0.3881 - val_wine_type_loss: 0.0304 - val_wine_quality_root_mean_squared_error: 0.6239 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 34/180\n",
+      "3155/3155 [==============================] - 0s 99us/sample - loss: 0.4230 - wine_quality_loss: 0.3934 - wine_type_loss: 0.0313 - wine_quality_root_mean_squared_error: 0.6270 - wine_type_accuracy: 0.9949 - val_loss: 0.4146 - val_wine_quality_loss: 0.3829 - val_wine_type_loss: 0.0302 - val_wine_quality_root_mean_squared_error: 0.6197 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 35/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.4133 - wine_quality_loss: 0.3836 - wine_type_loss: 0.0294 - wine_quality_root_mean_squared_error: 0.6195 - wine_type_accuracy: 0.9946 - val_loss: 0.4073 - val_wine_quality_loss: 0.3762 - val_wine_type_loss: 0.0300 - val_wine_quality_root_mean_squared_error: 0.6140 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 36/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.4051 - wine_quality_loss: 0.3762 - wine_type_loss: 0.0291 - wine_quality_root_mean_squared_error: 0.6131 - wine_type_accuracy: 0.9949 - val_loss: 0.3953 - val_wine_quality_loss: 0.3642 - val_wine_type_loss: 0.0299 - val_wine_quality_root_mean_squared_error: 0.6043 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 37/180\n",
+      "3155/3155 [==============================] - 0s 111us/sample - loss: 0.3967 - wine_quality_loss: 0.3684 - wine_type_loss: 0.0288 - wine_quality_root_mean_squared_error: 0.6064 - wine_type_accuracy: 0.9949 - val_loss: 0.3902 - val_wine_quality_loss: 0.3592 - val_wine_type_loss: 0.0297 - val_wine_quality_root_mean_squared_error: 0.6002 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 38/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3915 - wine_quality_loss: 0.3631 - wine_type_loss: 0.0285 - wine_quality_root_mean_squared_error: 0.6024 - wine_type_accuracy: 0.9949 - val_loss: 0.3888 - val_wine_quality_loss: 0.3578 - val_wine_type_loss: 0.0297 - val_wine_quality_root_mean_squared_error: 0.5990 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 39/180\n",
+      "3155/3155 [==============================] - 0s 81us/sample - loss: 0.3863 - wine_quality_loss: 0.3583 - wine_type_loss: 0.0283 - wine_quality_root_mean_squared_error: 0.5983 - wine_type_accuracy: 0.9952 - val_loss: 0.3802 - val_wine_quality_loss: 0.3494 - val_wine_type_loss: 0.0295 - val_wine_quality_root_mean_squared_error: 0.5919 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 40/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3806 - wine_quality_loss: 0.3523 - wine_type_loss: 0.0279 - wine_quality_root_mean_squared_error: 0.5938 - wine_type_accuracy: 0.9952 - val_loss: 0.3765 - val_wine_quality_loss: 0.3461 - val_wine_type_loss: 0.0293 - val_wine_quality_root_mean_squared_error: 0.5889 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 41/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3764 - wine_quality_loss: 0.3485 - wine_type_loss: 0.0277 - wine_quality_root_mean_squared_error: 0.5905 - wine_type_accuracy: 0.9956 - val_loss: 0.3748 - val_wine_quality_loss: 0.3442 - val_wine_type_loss: 0.0293 - val_wine_quality_root_mean_squared_error: 0.5875 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 42/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3722 - wine_quality_loss: 0.3449 - wine_type_loss: 0.0274 - wine_quality_root_mean_squared_error: 0.5871 - wine_type_accuracy: 0.9952 - val_loss: 0.3689 - val_wine_quality_loss: 0.3387 - val_wine_type_loss: 0.0290 - val_wine_quality_root_mean_squared_error: 0.5827 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 43/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3676 - wine_quality_loss: 0.3410 - wine_type_loss: 0.0272 - wine_quality_root_mean_squared_error: 0.5834 - wine_type_accuracy: 0.9952 - val_loss: 0.3675 - val_wine_quality_loss: 0.3376 - val_wine_type_loss: 0.0290 - val_wine_quality_root_mean_squared_error: 0.5815 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 44/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3637 - wine_quality_loss: 0.3364 - wine_type_loss: 0.0272 - wine_quality_root_mean_squared_error: 0.5802 - wine_type_accuracy: 0.9956 - val_loss: 0.3649 - val_wine_quality_loss: 0.3351 - val_wine_type_loss: 0.0288 - val_wine_quality_root_mean_squared_error: 0.5794 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 45/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3602 - wine_quality_loss: 0.3332 - wine_type_loss: 0.0267 - wine_quality_root_mean_squared_error: 0.5774 - wine_type_accuracy: 0.9952 - val_loss: 0.3635 - val_wine_quality_loss: 0.3337 - val_wine_type_loss: 0.0289 - val_wine_quality_root_mean_squared_error: 0.5782 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 46/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3574 - wine_quality_loss: 0.3308 - wine_type_loss: 0.0264 - wine_quality_root_mean_squared_error: 0.5752 - wine_type_accuracy: 0.9952 - val_loss: 0.3571 - val_wine_quality_loss: 0.3274 - val_wine_type_loss: 0.0287 - val_wine_quality_root_mean_squared_error: 0.5728 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 47/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3544 - wine_quality_loss: 0.3287 - wine_type_loss: 0.0263 - wine_quality_root_mean_squared_error: 0.5728 - wine_type_accuracy: 0.9956 - val_loss: 0.3760 - val_wine_quality_loss: 0.3460 - val_wine_type_loss: 0.0287 - val_wine_quality_root_mean_squared_error: 0.5890 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 48/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3514 - wine_quality_loss: 0.3257 - wine_type_loss: 0.0264 - wine_quality_root_mean_squared_error: 0.5704 - wine_type_accuracy: 0.9956 - val_loss: 0.3554 - val_wine_quality_loss: 0.3259 - val_wine_type_loss: 0.0286 - val_wine_quality_root_mean_squared_error: 0.5714 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 49/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3505 - wine_quality_loss: 0.3245 - wine_type_loss: 0.0258 - wine_quality_root_mean_squared_error: 0.5697 - wine_type_accuracy: 0.9956 - val_loss: 0.3585 - val_wine_quality_loss: 0.3289 - val_wine_type_loss: 0.0284 - val_wine_quality_root_mean_squared_error: 0.5743 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 50/180\n",
+      "3155/3155 [==============================] - 0s 76us/sample - loss: 0.3462 - wine_quality_loss: 0.3204 - wine_type_loss: 0.0256 - wine_quality_root_mean_squared_error: 0.5661 - wine_type_accuracy: 0.9956 - val_loss: 0.3621 - val_wine_quality_loss: 0.3331 - val_wine_type_loss: 0.0283 - val_wine_quality_root_mean_squared_error: 0.5775 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 51/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3462 - wine_quality_loss: 0.3208 - wine_type_loss: 0.0257 - wine_quality_root_mean_squared_error: 0.5663 - wine_type_accuracy: 0.9956 - val_loss: 0.3527 - val_wine_quality_loss: 0.3236 - val_wine_type_loss: 0.0283 - val_wine_quality_root_mean_squared_error: 0.5693 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 52/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3437 - wine_quality_loss: 0.3183 - wine_type_loss: 0.0254 - wine_quality_root_mean_squared_error: 0.5642 - wine_type_accuracy: 0.9956 - val_loss: 0.3533 - val_wine_quality_loss: 0.3245 - val_wine_type_loss: 0.0281 - val_wine_quality_root_mean_squared_error: 0.5700 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 53/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3406 - wine_quality_loss: 0.3151 - wine_type_loss: 0.0251 - wine_quality_root_mean_squared_error: 0.5616 - wine_type_accuracy: 0.9956 - val_loss: 0.3618 - val_wine_quality_loss: 0.3327 - val_wine_type_loss: 0.0282 - val_wine_quality_root_mean_squared_error: 0.5772 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 54/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3397 - wine_quality_loss: 0.3148 - wine_type_loss: 0.0249 - wine_quality_root_mean_squared_error: 0.5610 - wine_type_accuracy: 0.9959 - val_loss: 0.3492 - val_wine_quality_loss: 0.3202 - val_wine_type_loss: 0.0282 - val_wine_quality_root_mean_squared_error: 0.5663 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 55/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3380 - wine_quality_loss: 0.3122 - wine_type_loss: 0.0248 - wine_quality_root_mean_squared_error: 0.5596 - wine_type_accuracy: 0.9959 - val_loss: 0.3485 - val_wine_quality_loss: 0.3196 - val_wine_type_loss: 0.0281 - val_wine_quality_root_mean_squared_error: 0.5657 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 56/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.3372 - wine_quality_loss: 0.3125 - wine_type_loss: 0.0246 - wine_quality_root_mean_squared_error: 0.5590 - wine_type_accuracy: 0.9959 - val_loss: 0.3479 - val_wine_quality_loss: 0.3189 - val_wine_type_loss: 0.0280 - val_wine_quality_root_mean_squared_error: 0.5653 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 57/180\n",
+      "3155/3155 [==============================] - 0s 77us/sample - loss: 0.3346 - wine_quality_loss: 0.3106 - wine_type_loss: 0.0244 - wine_quality_root_mean_squared_error: 0.5569 - wine_type_accuracy: 0.9956 - val_loss: 0.3484 - val_wine_quality_loss: 0.3197 - val_wine_type_loss: 0.0279 - val_wine_quality_root_mean_squared_error: 0.5658 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 58/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3331 - wine_quality_loss: 0.3087 - wine_type_loss: 0.0243 - wine_quality_root_mean_squared_error: 0.5556 - wine_type_accuracy: 0.9959 - val_loss: 0.3502 - val_wine_quality_loss: 0.3215 - val_wine_type_loss: 0.0278 - val_wine_quality_root_mean_squared_error: 0.5675 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 59/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3316 - wine_quality_loss: 0.3078 - wine_type_loss: 0.0241 - wine_quality_root_mean_squared_error: 0.5545 - wine_type_accuracy: 0.9959 - val_loss: 0.3483 - val_wine_quality_loss: 0.3200 - val_wine_type_loss: 0.0278 - val_wine_quality_root_mean_squared_error: 0.5658 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 60/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3293 - wine_quality_loss: 0.3055 - wine_type_loss: 0.0240 - wine_quality_root_mean_squared_error: 0.5525 - wine_type_accuracy: 0.9959 - val_loss: 0.3464 - val_wine_quality_loss: 0.3182 - val_wine_type_loss: 0.0275 - val_wine_quality_root_mean_squared_error: 0.5644 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 61/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3279 - wine_quality_loss: 0.3045 - wine_type_loss: 0.0238 - wine_quality_root_mean_squared_error: 0.5514 - wine_type_accuracy: 0.9959 - val_loss: 0.3455 - val_wine_quality_loss: 0.3172 - val_wine_type_loss: 0.0277 - val_wine_quality_root_mean_squared_error: 0.5634 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 62/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3283 - wine_quality_loss: 0.3046 - wine_type_loss: 0.0238 - wine_quality_root_mean_squared_error: 0.5519 - wine_type_accuracy: 0.9959 - val_loss: 0.3449 - val_wine_quality_loss: 0.3167 - val_wine_type_loss: 0.0276 - val_wine_quality_root_mean_squared_error: 0.5630 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 63/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3260 - wine_quality_loss: 0.3028 - wine_type_loss: 0.0235 - wine_quality_root_mean_squared_error: 0.5499 - wine_type_accuracy: 0.9959 - val_loss: 0.3479 - val_wine_quality_loss: 0.3196 - val_wine_type_loss: 0.0275 - val_wine_quality_root_mean_squared_error: 0.5658 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 64/180\n",
+      "3155/3155 [==============================] - 0s 74us/sample - loss: 0.3260 - wine_quality_loss: 0.3025 - wine_type_loss: 0.0233 - wine_quality_root_mean_squared_error: 0.5501 - wine_type_accuracy: 0.9959 - val_loss: 0.3466 - val_wine_quality_loss: 0.3184 - val_wine_type_loss: 0.0274 - val_wine_quality_root_mean_squared_error: 0.5647 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 65/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3251 - wine_quality_loss: 0.3020 - wine_type_loss: 0.0232 - wine_quality_root_mean_squared_error: 0.5494 - wine_type_accuracy: 0.9959 - val_loss: 0.3433 - val_wine_quality_loss: 0.3151 - val_wine_type_loss: 0.0274 - val_wine_quality_root_mean_squared_error: 0.5617 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 66/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3235 - wine_quality_loss: 0.3011 - wine_type_loss: 0.0232 - wine_quality_root_mean_squared_error: 0.5480 - wine_type_accuracy: 0.9959 - val_loss: 0.3409 - val_wine_quality_loss: 0.3132 - val_wine_type_loss: 0.0273 - val_wine_quality_root_mean_squared_error: 0.5598 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 67/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3228 - wine_quality_loss: 0.2996 - wine_type_loss: 0.0230 - wine_quality_root_mean_squared_error: 0.5475 - wine_type_accuracy: 0.9959 - val_loss: 0.3427 - val_wine_quality_loss: 0.3148 - val_wine_type_loss: 0.0271 - val_wine_quality_root_mean_squared_error: 0.5615 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 68/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3235 - wine_quality_loss: 0.3013 - wine_type_loss: 0.0228 - wine_quality_root_mean_squared_error: 0.5483 - wine_type_accuracy: 0.9959 - val_loss: 0.3424 - val_wine_quality_loss: 0.3146 - val_wine_type_loss: 0.0270 - val_wine_quality_root_mean_squared_error: 0.5614 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 69/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3195 - wine_quality_loss: 0.2972 - wine_type_loss: 0.0227 - wine_quality_root_mean_squared_error: 0.5447 - wine_type_accuracy: 0.9962 - val_loss: 0.3477 - val_wine_quality_loss: 0.3197 - val_wine_type_loss: 0.0270 - val_wine_quality_root_mean_squared_error: 0.5660 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 70/180\n",
+      "3155/3155 [==============================] - 0s 89us/sample - loss: 0.3194 - wine_quality_loss: 0.2965 - wine_type_loss: 0.0225 - wine_quality_root_mean_squared_error: 0.5448 - wine_type_accuracy: 0.9959 - val_loss: 0.3402 - val_wine_quality_loss: 0.3129 - val_wine_type_loss: 0.0268 - val_wine_quality_root_mean_squared_error: 0.5596 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 71/180\n",
+      "3155/3155 [==============================] - 0s 78us/sample - loss: 0.3184 - wine_quality_loss: 0.2967 - wine_type_loss: 0.0224 - wine_quality_root_mean_squared_error: 0.5440 - wine_type_accuracy: 0.9959 - val_loss: 0.3466 - val_wine_quality_loss: 0.3189 - val_wine_type_loss: 0.0269 - val_wine_quality_root_mean_squared_error: 0.5652 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 72/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3183 - wine_quality_loss: 0.2962 - wine_type_loss: 0.0224 - wine_quality_root_mean_squared_error: 0.5439 - wine_type_accuracy: 0.9959 - val_loss: 0.3398 - val_wine_quality_loss: 0.3122 - val_wine_type_loss: 0.0267 - val_wine_quality_root_mean_squared_error: 0.5593 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 73/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3170 - wine_quality_loss: 0.2941 - wine_type_loss: 0.0222 - wine_quality_root_mean_squared_error: 0.5428 - wine_type_accuracy: 0.9959 - val_loss: 0.3380 - val_wine_quality_loss: 0.3107 - val_wine_type_loss: 0.0267 - val_wine_quality_root_mean_squared_error: 0.5577 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 74/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3166 - wine_quality_loss: 0.2945 - wine_type_loss: 0.0221 - wine_quality_root_mean_squared_error: 0.5427 - wine_type_accuracy: 0.9962 - val_loss: 0.3429 - val_wine_quality_loss: 0.3159 - val_wine_type_loss: 0.0266 - val_wine_quality_root_mean_squared_error: 0.5621 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 75/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.3156 - wine_quality_loss: 0.2935 - wine_type_loss: 0.0219 - wine_quality_root_mean_squared_error: 0.5418 - wine_type_accuracy: 0.9959 - val_loss: 0.3379 - val_wine_quality_loss: 0.3107 - val_wine_type_loss: 0.0265 - val_wine_quality_root_mean_squared_error: 0.5577 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 76/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3138 - wine_quality_loss: 0.2919 - wine_type_loss: 0.0218 - wine_quality_root_mean_squared_error: 0.5403 - wine_type_accuracy: 0.9959 - val_loss: 0.3518 - val_wine_quality_loss: 0.3246 - val_wine_type_loss: 0.0266 - val_wine_quality_root_mean_squared_error: 0.5699 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 77/180\n",
+      "3155/3155 [==============================] - 0s 75us/sample - loss: 0.3143 - wine_quality_loss: 0.2928 - wine_type_loss: 0.0217 - wine_quality_root_mean_squared_error: 0.5409 - wine_type_accuracy: 0.9959 - val_loss: 0.3384 - val_wine_quality_loss: 0.3114 - val_wine_type_loss: 0.0264 - val_wine_quality_root_mean_squared_error: 0.5583 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 78/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.3129 - wine_quality_loss: 0.2912 - wine_type_loss: 0.0216 - wine_quality_root_mean_squared_error: 0.5396 - wine_type_accuracy: 0.9959 - val_loss: 0.3402 - val_wine_quality_loss: 0.3133 - val_wine_type_loss: 0.0265 - val_wine_quality_root_mean_squared_error: 0.5599 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 79/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.3134 - wine_quality_loss: 0.2919 - wine_type_loss: 0.0215 - wine_quality_root_mean_squared_error: 0.5402 - wine_type_accuracy: 0.9962 - val_loss: 0.3411 - val_wine_quality_loss: 0.3141 - val_wine_type_loss: 0.0263 - val_wine_quality_root_mean_squared_error: 0.5608 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 80/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3108 - wine_quality_loss: 0.2895 - wine_type_loss: 0.0213 - wine_quality_root_mean_squared_error: 0.5379 - wine_type_accuracy: 0.9962 - val_loss: 0.3451 - val_wine_quality_loss: 0.3179 - val_wine_type_loss: 0.0264 - val_wine_quality_root_mean_squared_error: 0.5643 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 81/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3111 - wine_quality_loss: 0.2894 - wine_type_loss: 0.0214 - wine_quality_root_mean_squared_error: 0.5383 - wine_type_accuracy: 0.9962 - val_loss: 0.3362 - val_wine_quality_loss: 0.3092 - val_wine_type_loss: 0.0262 - val_wine_quality_root_mean_squared_error: 0.5564 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 82/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3098 - wine_quality_loss: 0.2888 - wine_type_loss: 0.0212 - wine_quality_root_mean_squared_error: 0.5372 - wine_type_accuracy: 0.9962 - val_loss: 0.3550 - val_wine_quality_loss: 0.3278 - val_wine_type_loss: 0.0263 - val_wine_quality_root_mean_squared_error: 0.5731 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 83/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.3088 - wine_quality_loss: 0.2876 - wine_type_loss: 0.0211 - wine_quality_root_mean_squared_error: 0.5364 - wine_type_accuracy: 0.9962 - val_loss: 0.3389 - val_wine_quality_loss: 0.3122 - val_wine_type_loss: 0.0261 - val_wine_quality_root_mean_squared_error: 0.5590 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 84/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3084 - wine_quality_loss: 0.2878 - wine_type_loss: 0.0209 - wine_quality_root_mean_squared_error: 0.5361 - wine_type_accuracy: 0.9962 - val_loss: 0.3411 - val_wine_quality_loss: 0.3146 - val_wine_type_loss: 0.0260 - val_wine_quality_root_mean_squared_error: 0.5610 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 85/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.3066 - wine_quality_loss: 0.2860 - wine_type_loss: 0.0214 - wine_quality_root_mean_squared_error: 0.5345 - wine_type_accuracy: 0.9962 - val_loss: 0.3401 - val_wine_quality_loss: 0.3135 - val_wine_type_loss: 0.0262 - val_wine_quality_root_mean_squared_error: 0.5600 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 86/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3075 - wine_quality_loss: 0.2866 - wine_type_loss: 0.0208 - wine_quality_root_mean_squared_error: 0.5354 - wine_type_accuracy: 0.9962 - val_loss: 0.3448 - val_wine_quality_loss: 0.3181 - val_wine_type_loss: 0.0260 - val_wine_quality_root_mean_squared_error: 0.5644 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 87/180\n",
+      "3155/3155 [==============================] - 0s 78us/sample - loss: 0.3066 - wine_quality_loss: 0.2855 - wine_type_loss: 0.0208 - wine_quality_root_mean_squared_error: 0.5346 - wine_type_accuracy: 0.9962 - val_loss: 0.3383 - val_wine_quality_loss: 0.3116 - val_wine_type_loss: 0.0260 - val_wine_quality_root_mean_squared_error: 0.5586 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 88/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3061 - wine_quality_loss: 0.2859 - wine_type_loss: 0.0205 - wine_quality_root_mean_squared_error: 0.5344 - wine_type_accuracy: 0.9962 - val_loss: 0.3407 - val_wine_quality_loss: 0.3140 - val_wine_type_loss: 0.0259 - val_wine_quality_root_mean_squared_error: 0.5608 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 89/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3047 - wine_quality_loss: 0.2834 - wine_type_loss: 0.0208 - wine_quality_root_mean_squared_error: 0.5330 - wine_type_accuracy: 0.9962 - val_loss: 0.3445 - val_wine_quality_loss: 0.3183 - val_wine_type_loss: 0.0258 - val_wine_quality_root_mean_squared_error: 0.5642 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 90/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.3047 - wine_quality_loss: 0.2855 - wine_type_loss: 0.0205 - wine_quality_root_mean_squared_error: 0.5331 - wine_type_accuracy: 0.9962 - val_loss: 0.3444 - val_wine_quality_loss: 0.3178 - val_wine_type_loss: 0.0259 - val_wine_quality_root_mean_squared_error: 0.5641 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 91/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3029 - wine_quality_loss: 0.2820 - wine_type_loss: 0.0215 - wine_quality_root_mean_squared_error: 0.5316 - wine_type_accuracy: 0.9962 - val_loss: 0.3384 - val_wine_quality_loss: 0.3120 - val_wine_type_loss: 0.0258 - val_wine_quality_root_mean_squared_error: 0.5588 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 92/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3026 - wine_quality_loss: 0.2823 - wine_type_loss: 0.0212 - wine_quality_root_mean_squared_error: 0.5314 - wine_type_accuracy: 0.9962 - val_loss: 0.3515 - val_wine_quality_loss: 0.3249 - val_wine_type_loss: 0.0257 - val_wine_quality_root_mean_squared_error: 0.5705 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 93/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.3024 - wine_quality_loss: 0.2820 - wine_type_loss: 0.0207 - wine_quality_root_mean_squared_error: 0.5312 - wine_type_accuracy: 0.9962 - val_loss: 0.3387 - val_wine_quality_loss: 0.3122 - val_wine_type_loss: 0.0257 - val_wine_quality_root_mean_squared_error: 0.5592 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 94/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3017 - wine_quality_loss: 0.2816 - wine_type_loss: 0.0210 - wine_quality_root_mean_squared_error: 0.5307 - wine_type_accuracy: 0.9962 - val_loss: 0.3341 - val_wine_quality_loss: 0.3078 - val_wine_type_loss: 0.0256 - val_wine_quality_root_mean_squared_error: 0.5551 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 95/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.3013 - wine_quality_loss: 0.2811 - wine_type_loss: 0.0201 - wine_quality_root_mean_squared_error: 0.5304 - wine_type_accuracy: 0.9962 - val_loss: 0.3389 - val_wine_quality_loss: 0.3129 - val_wine_type_loss: 0.0256 - val_wine_quality_root_mean_squared_error: 0.5595 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 96/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.3007 - wine_quality_loss: 0.2809 - wine_type_loss: 0.0197 - wine_quality_root_mean_squared_error: 0.5300 - wine_type_accuracy: 0.9962 - val_loss: 0.3361 - val_wine_quality_loss: 0.3099 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5570 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 97/180\n",
+      "3155/3155 [==============================] - 0s 75us/sample - loss: 0.3005 - wine_quality_loss: 0.2807 - wine_type_loss: 0.0198 - wine_quality_root_mean_squared_error: 0.5297 - wine_type_accuracy: 0.9962 - val_loss: 0.3415 - val_wine_quality_loss: 0.3153 - val_wine_type_loss: 0.0257 - val_wine_quality_root_mean_squared_error: 0.5617 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 98/180\n",
+      "3155/3155 [==============================] - 0s 79us/sample - loss: 0.2998 - wine_quality_loss: 0.2805 - wine_type_loss: 0.0196 - wine_quality_root_mean_squared_error: 0.5293 - wine_type_accuracy: 0.9962 - val_loss: 0.3430 - val_wine_quality_loss: 0.3169 - val_wine_type_loss: 0.0256 - val_wine_quality_root_mean_squared_error: 0.5631 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 99/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2989 - wine_quality_loss: 0.2797 - wine_type_loss: 0.0195 - wine_quality_root_mean_squared_error: 0.5285 - wine_type_accuracy: 0.9962 - val_loss: 0.3436 - val_wine_quality_loss: 0.3173 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5637 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 100/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2989 - wine_quality_loss: 0.2797 - wine_type_loss: 0.0195 - wine_quality_root_mean_squared_error: 0.5286 - wine_type_accuracy: 0.9962 - val_loss: 0.3409 - val_wine_quality_loss: 0.3145 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5613 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 101/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2970 - wine_quality_loss: 0.2775 - wine_type_loss: 0.0195 - wine_quality_root_mean_squared_error: 0.5268 - wine_type_accuracy: 0.9962 - val_loss: 0.3390 - val_wine_quality_loss: 0.3130 - val_wine_type_loss: 0.0256 - val_wine_quality_root_mean_squared_error: 0.5595 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 102/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2975 - wine_quality_loss: 0.2782 - wine_type_loss: 0.0193 - wine_quality_root_mean_squared_error: 0.5274 - wine_type_accuracy: 0.9962 - val_loss: 0.3365 - val_wine_quality_loss: 0.3105 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5574 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 103/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2963 - wine_quality_loss: 0.2770 - wine_type_loss: 0.0192 - wine_quality_root_mean_squared_error: 0.5263 - wine_type_accuracy: 0.9962 - val_loss: 0.3400 - val_wine_quality_loss: 0.3138 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5605 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 104/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2969 - wine_quality_loss: 0.2778 - wine_type_loss: 0.0192 - wine_quality_root_mean_squared_error: 0.5269 - wine_type_accuracy: 0.9962 - val_loss: 0.3360 - val_wine_quality_loss: 0.3099 - val_wine_type_loss: 0.0255 - val_wine_quality_root_mean_squared_error: 0.5569 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 105/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2960 - wine_quality_loss: 0.2769 - wine_type_loss: 0.0191 - wine_quality_root_mean_squared_error: 0.5262 - wine_type_accuracy: 0.9962 - val_loss: 0.3373 - val_wine_quality_loss: 0.3116 - val_wine_type_loss: 0.0254 - val_wine_quality_root_mean_squared_error: 0.5582 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 106/180\n",
+      "3155/3155 [==============================] - 0s 74us/sample - loss: 0.2962 - wine_quality_loss: 0.2773 - wine_type_loss: 0.0191 - wine_quality_root_mean_squared_error: 0.5265 - wine_type_accuracy: 0.9962 - val_loss: 0.3392 - val_wine_quality_loss: 0.3130 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5599 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 107/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2943 - wine_quality_loss: 0.2757 - wine_type_loss: 0.0189 - wine_quality_root_mean_squared_error: 0.5247 - wine_type_accuracy: 0.9962 - val_loss: 0.3322 - val_wine_quality_loss: 0.3065 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5536 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 108/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2943 - wine_quality_loss: 0.2754 - wine_type_loss: 0.0189 - wine_quality_root_mean_squared_error: 0.5248 - wine_type_accuracy: 0.9962 - val_loss: 0.3330 - val_wine_quality_loss: 0.3071 - val_wine_type_loss: 0.0254 - val_wine_quality_root_mean_squared_error: 0.5543 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 109/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2933 - wine_quality_loss: 0.2748 - wine_type_loss: 0.0187 - wine_quality_root_mean_squared_error: 0.5239 - wine_type_accuracy: 0.9962 - val_loss: 0.3366 - val_wine_quality_loss: 0.3108 - val_wine_type_loss: 0.0254 - val_wine_quality_root_mean_squared_error: 0.5575 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 110/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2930 - wine_quality_loss: 0.2737 - wine_type_loss: 0.0187 - wine_quality_root_mean_squared_error: 0.5237 - wine_type_accuracy: 0.9962 - val_loss: 0.3404 - val_wine_quality_loss: 0.3143 - val_wine_type_loss: 0.0254 - val_wine_quality_root_mean_squared_error: 0.5610 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 111/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2939 - wine_quality_loss: 0.2754 - wine_type_loss: 0.0186 - wine_quality_root_mean_squared_error: 0.5246 - wine_type_accuracy: 0.9962 - val_loss: 0.3354 - val_wine_quality_loss: 0.3097 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5566 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 112/180\n",
+      "3155/3155 [==============================] - 0s 88us/sample - loss: 0.2927 - wine_quality_loss: 0.2739 - wine_type_loss: 0.0186 - wine_quality_root_mean_squared_error: 0.5235 - wine_type_accuracy: 0.9962 - val_loss: 0.3353 - val_wine_quality_loss: 0.3097 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5565 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 113/180\n",
+      "3155/3155 [==============================] - 0s 79us/sample - loss: 0.2923 - wine_quality_loss: 0.2735 - wine_type_loss: 0.0185 - wine_quality_root_mean_squared_error: 0.5232 - wine_type_accuracy: 0.9962 - val_loss: 0.3367 - val_wine_quality_loss: 0.3108 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5577 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 114/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2918 - wine_quality_loss: 0.2737 - wine_type_loss: 0.0184 - wine_quality_root_mean_squared_error: 0.5228 - wine_type_accuracy: 0.9962 - val_loss: 0.3339 - val_wine_quality_loss: 0.3081 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5552 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 115/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2914 - wine_quality_loss: 0.2727 - wine_type_loss: 0.0184 - wine_quality_root_mean_squared_error: 0.5225 - wine_type_accuracy: 0.9962 - val_loss: 0.3363 - val_wine_quality_loss: 0.3105 - val_wine_type_loss: 0.0252 - val_wine_quality_root_mean_squared_error: 0.5574 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 116/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2909 - wine_quality_loss: 0.2725 - wine_type_loss: 0.0183 - wine_quality_root_mean_squared_error: 0.5220 - wine_type_accuracy: 0.9962 - val_loss: 0.3436 - val_wine_quality_loss: 0.3177 - val_wine_type_loss: 0.0252 - val_wine_quality_root_mean_squared_error: 0.5639 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 117/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2907 - wine_quality_loss: 0.2727 - wine_type_loss: 0.0182 - wine_quality_root_mean_squared_error: 0.5220 - wine_type_accuracy: 0.9962 - val_loss: 0.3320 - val_wine_quality_loss: 0.3064 - val_wine_type_loss: 0.0251 - val_wine_quality_root_mean_squared_error: 0.5536 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 118/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2882 - wine_quality_loss: 0.2696 - wine_type_loss: 0.0182 - wine_quality_root_mean_squared_error: 0.5196 - wine_type_accuracy: 0.9962 - val_loss: 0.3444 - val_wine_quality_loss: 0.3185 - val_wine_type_loss: 0.0252 - val_wine_quality_root_mean_squared_error: 0.5647 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 119/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2893 - wine_quality_loss: 0.2709 - wine_type_loss: 0.0181 - wine_quality_root_mean_squared_error: 0.5208 - wine_type_accuracy: 0.9962 - val_loss: 0.3416 - val_wine_quality_loss: 0.3157 - val_wine_type_loss: 0.0253 - val_wine_quality_root_mean_squared_error: 0.5621 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 120/180\n",
+      "3155/3155 [==============================] - 0s 77us/sample - loss: 0.2883 - wine_quality_loss: 0.2703 - wine_type_loss: 0.0180 - wine_quality_root_mean_squared_error: 0.5198 - wine_type_accuracy: 0.9962 - val_loss: 0.3350 - val_wine_quality_loss: 0.3094 - val_wine_type_loss: 0.0251 - val_wine_quality_root_mean_squared_error: 0.5564 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 121/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2880 - wine_quality_loss: 0.2699 - wine_type_loss: 0.0179 - wine_quality_root_mean_squared_error: 0.5197 - wine_type_accuracy: 0.9962 - val_loss: 0.3338 - val_wine_quality_loss: 0.3081 - val_wine_type_loss: 0.0251 - val_wine_quality_root_mean_squared_error: 0.5552 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 122/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2873 - wine_quality_loss: 0.2691 - wine_type_loss: 0.0179 - wine_quality_root_mean_squared_error: 0.5189 - wine_type_accuracy: 0.9962 - val_loss: 0.3384 - val_wine_quality_loss: 0.3128 - val_wine_type_loss: 0.0251 - val_wine_quality_root_mean_squared_error: 0.5594 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 123/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2873 - wine_quality_loss: 0.2691 - wine_type_loss: 0.0178 - wine_quality_root_mean_squared_error: 0.5191 - wine_type_accuracy: 0.9965 - val_loss: 0.3330 - val_wine_quality_loss: 0.3075 - val_wine_type_loss: 0.0251 - val_wine_quality_root_mean_squared_error: 0.5546 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 124/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2855 - wine_quality_loss: 0.2674 - wine_type_loss: 0.0177 - wine_quality_root_mean_squared_error: 0.5174 - wine_type_accuracy: 0.9962 - val_loss: 0.3318 - val_wine_quality_loss: 0.3062 - val_wine_type_loss: 0.0250 - val_wine_quality_root_mean_squared_error: 0.5536 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 125/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2862 - wine_quality_loss: 0.2689 - wine_type_loss: 0.0177 - wine_quality_root_mean_squared_error: 0.5181 - wine_type_accuracy: 0.9962 - val_loss: 0.3375 - val_wine_quality_loss: 0.3119 - val_wine_type_loss: 0.0250 - val_wine_quality_root_mean_squared_error: 0.5587 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 126/180\n",
+      "3155/3155 [==============================] - 0s 75us/sample - loss: 0.2852 - wine_quality_loss: 0.2672 - wine_type_loss: 0.0176 - wine_quality_root_mean_squared_error: 0.5172 - wine_type_accuracy: 0.9965 - val_loss: 0.3344 - val_wine_quality_loss: 0.3090 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5560 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 127/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2841 - wine_quality_loss: 0.2664 - wine_type_loss: 0.0175 - wine_quality_root_mean_squared_error: 0.5162 - wine_type_accuracy: 0.9962 - val_loss: 0.3367 - val_wine_quality_loss: 0.3114 - val_wine_type_loss: 0.0250 - val_wine_quality_root_mean_squared_error: 0.5580 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 128/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.2854 - wine_quality_loss: 0.2678 - wine_type_loss: 0.0175 - wine_quality_root_mean_squared_error: 0.5176 - wine_type_accuracy: 0.9965 - val_loss: 0.3369 - val_wine_quality_loss: 0.3113 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5583 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 129/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2841 - wine_quality_loss: 0.2669 - wine_type_loss: 0.0174 - wine_quality_root_mean_squared_error: 0.5164 - wine_type_accuracy: 0.9965 - val_loss: 0.3370 - val_wine_quality_loss: 0.3117 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5584 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 130/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2836 - wine_quality_loss: 0.2660 - wine_type_loss: 0.0174 - wine_quality_root_mean_squared_error: 0.5160 - wine_type_accuracy: 0.9965 - val_loss: 0.3543 - val_wine_quality_loss: 0.3288 - val_wine_type_loss: 0.0250 - val_wine_quality_root_mean_squared_error: 0.5736 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 131/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2832 - wine_quality_loss: 0.2664 - wine_type_loss: 0.0173 - wine_quality_root_mean_squared_error: 0.5156 - wine_type_accuracy: 0.9965 - val_loss: 0.3328 - val_wine_quality_loss: 0.3077 - val_wine_type_loss: 0.0248 - val_wine_quality_root_mean_squared_error: 0.5547 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 132/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2822 - wine_quality_loss: 0.2651 - wine_type_loss: 0.0172 - wine_quality_root_mean_squared_error: 0.5147 - wine_type_accuracy: 0.9965 - val_loss: 0.3422 - val_wine_quality_loss: 0.3166 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5630 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 133/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2820 - wine_quality_loss: 0.2650 - wine_type_loss: 0.0171 - wine_quality_root_mean_squared_error: 0.5146 - wine_type_accuracy: 0.9965 - val_loss: 0.3359 - val_wine_quality_loss: 0.3109 - val_wine_type_loss: 0.0248 - val_wine_quality_root_mean_squared_error: 0.5575 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 134/180\n",
+      "3155/3155 [==============================] - 0s 74us/sample - loss: 0.2820 - wine_quality_loss: 0.2650 - wine_type_loss: 0.0171 - wine_quality_root_mean_squared_error: 0.5146 - wine_type_accuracy: 0.9962 - val_loss: 0.3333 - val_wine_quality_loss: 0.3080 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5552 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 135/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2808 - wine_quality_loss: 0.2640 - wine_type_loss: 0.0170 - wine_quality_root_mean_squared_error: 0.5136 - wine_type_accuracy: 0.9965 - val_loss: 0.3410 - val_wine_quality_loss: 0.3155 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5621 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 136/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2819 - wine_quality_loss: 0.2647 - wine_type_loss: 0.0170 - wine_quality_root_mean_squared_error: 0.5147 - wine_type_accuracy: 0.9965 - val_loss: 0.3431 - val_wine_quality_loss: 0.3175 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5640 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 137/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2816 - wine_quality_loss: 0.2648 - wine_type_loss: 0.0169 - wine_quality_root_mean_squared_error: 0.5144 - wine_type_accuracy: 0.9965 - val_loss: 0.3329 - val_wine_quality_loss: 0.3077 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5548 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 138/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2802 - wine_quality_loss: 0.2634 - wine_type_loss: 0.0168 - wine_quality_root_mean_squared_error: 0.5132 - wine_type_accuracy: 0.9965 - val_loss: 0.3421 - val_wine_quality_loss: 0.3170 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5630 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 139/180\n",
+      "3155/3155 [==============================] - 0s 89us/sample - loss: 0.2805 - wine_quality_loss: 0.2636 - wine_type_loss: 0.0168 - wine_quality_root_mean_squared_error: 0.5135 - wine_type_accuracy: 0.9965 - val_loss: 0.3371 - val_wine_quality_loss: 0.3120 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5585 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 140/180\n",
+      "3155/3155 [==============================] - 0s 76us/sample - loss: 0.2792 - wine_quality_loss: 0.2621 - wine_type_loss: 0.0167 - wine_quality_root_mean_squared_error: 0.5123 - wine_type_accuracy: 0.9965 - val_loss: 0.3366 - val_wine_quality_loss: 0.3113 - val_wine_type_loss: 0.0248 - val_wine_quality_root_mean_squared_error: 0.5580 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 141/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2791 - wine_quality_loss: 0.2622 - wine_type_loss: 0.0167 - wine_quality_root_mean_squared_error: 0.5122 - wine_type_accuracy: 0.9965 - val_loss: 0.3408 - val_wine_quality_loss: 0.3156 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5619 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 142/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2780 - wine_quality_loss: 0.2613 - wine_type_loss: 0.0165 - wine_quality_root_mean_squared_error: 0.5113 - wine_type_accuracy: 0.9965 - val_loss: 0.3326 - val_wine_quality_loss: 0.3076 - val_wine_type_loss: 0.0249 - val_wine_quality_root_mean_squared_error: 0.5545 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 143/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2777 - wine_quality_loss: 0.2611 - wine_type_loss: 0.0165 - wine_quality_root_mean_squared_error: 0.5111 - wine_type_accuracy: 0.9965 - val_loss: 0.3338 - val_wine_quality_loss: 0.3084 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5557 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 144/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.2774 - wine_quality_loss: 0.2611 - wine_type_loss: 0.0165 - wine_quality_root_mean_squared_error: 0.5107 - wine_type_accuracy: 0.9965 - val_loss: 0.3320 - val_wine_quality_loss: 0.3069 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5541 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 145/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2778 - wine_quality_loss: 0.2612 - wine_type_loss: 0.0164 - wine_quality_root_mean_squared_error: 0.5113 - wine_type_accuracy: 0.9965 - val_loss: 0.3337 - val_wine_quality_loss: 0.3085 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5556 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 146/180\n",
+      "3155/3155 [==============================] - 0s 90us/sample - loss: 0.2767 - wine_quality_loss: 0.2597 - wine_type_loss: 0.0164 - wine_quality_root_mean_squared_error: 0.5101 - wine_type_accuracy: 0.9965 - val_loss: 0.3399 - val_wine_quality_loss: 0.3147 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5612 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 147/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2762 - wine_quality_loss: 0.2595 - wine_type_loss: 0.0163 - wine_quality_root_mean_squared_error: 0.5097 - wine_type_accuracy: 0.9965 - val_loss: 0.3345 - val_wine_quality_loss: 0.3094 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5564 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 148/180\n",
+      "3155/3155 [==============================] - 0s 74us/sample - loss: 0.2765 - wine_quality_loss: 0.2600 - wine_type_loss: 0.0163 - wine_quality_root_mean_squared_error: 0.5100 - wine_type_accuracy: 0.9965 - val_loss: 0.3336 - val_wine_quality_loss: 0.3086 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5556 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 149/180\n",
+      "3155/3155 [==============================] - 0s 81us/sample - loss: 0.2769 - wine_quality_loss: 0.2607 - wine_type_loss: 0.0163 - wine_quality_root_mean_squared_error: 0.5104 - wine_type_accuracy: 0.9965 - val_loss: 0.3397 - val_wine_quality_loss: 0.3144 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5610 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 150/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2754 - wine_quality_loss: 0.2591 - wine_type_loss: 0.0162 - wine_quality_root_mean_squared_error: 0.5091 - wine_type_accuracy: 0.9965 - val_loss: 0.3387 - val_wine_quality_loss: 0.3136 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5601 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 151/180\n",
+      "3155/3155 [==============================] - 0s 95us/sample - loss: 0.2749 - wine_quality_loss: 0.2586 - wine_type_loss: 0.0162 - wine_quality_root_mean_squared_error: 0.5086 - wine_type_accuracy: 0.9965 - val_loss: 0.3347 - val_wine_quality_loss: 0.3095 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5566 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 152/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2746 - wine_quality_loss: 0.2589 - wine_type_loss: 0.0166 - wine_quality_root_mean_squared_error: 0.5084 - wine_type_accuracy: 0.9965 - val_loss: 0.3312 - val_wine_quality_loss: 0.3062 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5535 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 153/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2749 - wine_quality_loss: 0.2590 - wine_type_loss: 0.0160 - wine_quality_root_mean_squared_error: 0.5087 - wine_type_accuracy: 0.9965 - val_loss: 0.3301 - val_wine_quality_loss: 0.3053 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5524 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 154/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2745 - wine_quality_loss: 0.2582 - wine_type_loss: 0.0160 - wine_quality_root_mean_squared_error: 0.5084 - wine_type_accuracy: 0.9965 - val_loss: 0.3308 - val_wine_quality_loss: 0.3059 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5531 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 155/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2743 - wine_quality_loss: 0.2581 - wine_type_loss: 0.0159 - wine_quality_root_mean_squared_error: 0.5083 - wine_type_accuracy: 0.9965 - val_loss: 0.3335 - val_wine_quality_loss: 0.3084 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5554 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 156/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2728 - wine_quality_loss: 0.2576 - wine_type_loss: 0.0159 - wine_quality_root_mean_squared_error: 0.5068 - wine_type_accuracy: 0.9965 - val_loss: 0.3322 - val_wine_quality_loss: 0.3073 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5544 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 157/180\n",
+      "3155/3155 [==============================] - 0s 74us/sample - loss: 0.2728 - wine_quality_loss: 0.2565 - wine_type_loss: 0.0159 - wine_quality_root_mean_squared_error: 0.5068 - wine_type_accuracy: 0.9965 - val_loss: 0.3340 - val_wine_quality_loss: 0.3090 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5560 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 158/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2714 - wine_quality_loss: 0.2555 - wine_type_loss: 0.0158 - wine_quality_root_mean_squared_error: 0.5056 - wine_type_accuracy: 0.9965 - val_loss: 0.3346 - val_wine_quality_loss: 0.3098 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5566 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 159/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2719 - wine_quality_loss: 0.2558 - wine_type_loss: 0.0157 - wine_quality_root_mean_squared_error: 0.5061 - wine_type_accuracy: 0.9965 - val_loss: 0.3335 - val_wine_quality_loss: 0.3085 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5556 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 160/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2699 - wine_quality_loss: 0.2540 - wine_type_loss: 0.0157 - wine_quality_root_mean_squared_error: 0.5041 - wine_type_accuracy: 0.9965 - val_loss: 0.3380 - val_wine_quality_loss: 0.3129 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5596 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 161/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2722 - wine_quality_loss: 0.2562 - wine_type_loss: 0.0156 - wine_quality_root_mean_squared_error: 0.5065 - wine_type_accuracy: 0.9965 - val_loss: 0.3308 - val_wine_quality_loss: 0.3060 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5532 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 162/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2712 - wine_quality_loss: 0.2555 - wine_type_loss: 0.0156 - wine_quality_root_mean_squared_error: 0.5056 - wine_type_accuracy: 0.9965 - val_loss: 0.3332 - val_wine_quality_loss: 0.3081 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5553 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 163/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2705 - wine_quality_loss: 0.2550 - wine_type_loss: 0.0155 - wine_quality_root_mean_squared_error: 0.5050 - wine_type_accuracy: 0.9965 - val_loss: 0.3343 - val_wine_quality_loss: 0.3091 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5562 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 164/180\n",
+      "3155/3155 [==============================] - 0s 77us/sample - loss: 0.2698 - wine_quality_loss: 0.2544 - wine_type_loss: 0.0154 - wine_quality_root_mean_squared_error: 0.5043 - wine_type_accuracy: 0.9965 - val_loss: 0.3336 - val_wine_quality_loss: 0.3084 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5557 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 165/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2694 - wine_quality_loss: 0.2540 - wine_type_loss: 0.0154 - wine_quality_root_mean_squared_error: 0.5040 - wine_type_accuracy: 0.9965 - val_loss: 0.3359 - val_wine_quality_loss: 0.3108 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5577 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 166/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2693 - wine_quality_loss: 0.2541 - wine_type_loss: 0.0153 - wine_quality_root_mean_squared_error: 0.5040 - wine_type_accuracy: 0.9965 - val_loss: 0.3298 - val_wine_quality_loss: 0.3049 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5522 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 167/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2690 - wine_quality_loss: 0.2532 - wine_type_loss: 0.0154 - wine_quality_root_mean_squared_error: 0.5035 - wine_type_accuracy: 0.9965 - val_loss: 0.3319 - val_wine_quality_loss: 0.3069 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5541 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 168/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2675 - wine_quality_loss: 0.2527 - wine_type_loss: 0.0152 - wine_quality_root_mean_squared_error: 0.5022 - wine_type_accuracy: 0.9965 - val_loss: 0.3366 - val_wine_quality_loss: 0.3117 - val_wine_type_loss: 0.0244 - val_wine_quality_root_mean_squared_error: 0.5585 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 169/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2682 - wine_quality_loss: 0.2530 - wine_type_loss: 0.0152 - wine_quality_root_mean_squared_error: 0.5030 - wine_type_accuracy: 0.9965 - val_loss: 0.3325 - val_wine_quality_loss: 0.3076 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5547 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 170/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2692 - wine_quality_loss: 0.2541 - wine_type_loss: 0.0151 - wine_quality_root_mean_squared_error: 0.5040 - wine_type_accuracy: 0.9965 - val_loss: 0.3381 - val_wine_quality_loss: 0.3131 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5597 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 171/180\n",
+      "3155/3155 [==============================] - 0s 73us/sample - loss: 0.2684 - wine_quality_loss: 0.2532 - wine_type_loss: 0.0151 - wine_quality_root_mean_squared_error: 0.5032 - wine_type_accuracy: 0.9965 - val_loss: 0.3304 - val_wine_quality_loss: 0.3055 - val_wine_type_loss: 0.0244 - val_wine_quality_root_mean_squared_error: 0.5528 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 172/180\n",
+      "3155/3155 [==============================] - 0s 96us/sample - loss: 0.2663 - wine_quality_loss: 0.2512 - wine_type_loss: 0.0150 - wine_quality_root_mean_squared_error: 0.5012 - wine_type_accuracy: 0.9965 - val_loss: 0.3304 - val_wine_quality_loss: 0.3057 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5528 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 173/180\n",
+      "3155/3155 [==============================] - 0s 92us/sample - loss: 0.2661 - wine_quality_loss: 0.2508 - wine_type_loss: 0.0150 - wine_quality_root_mean_squared_error: 0.5011 - wine_type_accuracy: 0.9965 - val_loss: 0.3337 - val_wine_quality_loss: 0.3089 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5557 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 174/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2658 - wine_quality_loss: 0.2505 - wine_type_loss: 0.0150 - wine_quality_root_mean_squared_error: 0.5008 - wine_type_accuracy: 0.9965 - val_loss: 0.3390 - val_wine_quality_loss: 0.3139 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5605 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 175/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2647 - wine_quality_loss: 0.2502 - wine_type_loss: 0.0151 - wine_quality_root_mean_squared_error: 0.4998 - wine_type_accuracy: 0.9965 - val_loss: 0.3333 - val_wine_quality_loss: 0.3087 - val_wine_type_loss: 0.0243 - val_wine_quality_root_mean_squared_error: 0.5556 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 176/180\n",
+      "3155/3155 [==============================] - 0s 94us/sample - loss: 0.2656 - wine_quality_loss: 0.2504 - wine_type_loss: 0.0148 - wine_quality_root_mean_squared_error: 0.5007 - wine_type_accuracy: 0.9965 - val_loss: 0.3341 - val_wine_quality_loss: 0.3093 - val_wine_type_loss: 0.0245 - val_wine_quality_root_mean_squared_error: 0.5562 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 177/180\n",
+      "3155/3155 [==============================] - 0s 93us/sample - loss: 0.2651 - wine_quality_loss: 0.2500 - wine_type_loss: 0.0149 - wine_quality_root_mean_squared_error: 0.5002 - wine_type_accuracy: 0.9965 - val_loss: 0.3369 - val_wine_quality_loss: 0.3120 - val_wine_type_loss: 0.0244 - val_wine_quality_root_mean_squared_error: 0.5587 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 178/180\n",
+      "3155/3155 [==============================] - 0s 91us/sample - loss: 0.2650 - wine_quality_loss: 0.2498 - wine_type_loss: 0.0147 - wine_quality_root_mean_squared_error: 0.5002 - wine_type_accuracy: 0.9965 - val_loss: 0.3356 - val_wine_quality_loss: 0.3106 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5574 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 179/180\n",
+      "3155/3155 [==============================] - 0s 77us/sample - loss: 0.2643 - wine_quality_loss: 0.2496 - wine_type_loss: 0.0146 - wine_quality_root_mean_squared_error: 0.4997 - wine_type_accuracy: 0.9965 - val_loss: 0.3324 - val_wine_quality_loss: 0.3074 - val_wine_type_loss: 0.0247 - val_wine_quality_root_mean_squared_error: 0.5544 - val_wine_type_accuracy: 0.9949\n",
+      "Epoch 180/180\n",
+      "3155/3155 [==============================] - 0s 79us/sample - loss: 0.2631 - wine_quality_loss: 0.2484 - wine_type_loss: 0.0147 - wine_quality_root_mean_squared_error: 0.4984 - wine_type_accuracy: 0.9965 - val_loss: 0.3403 - val_wine_quality_loss: 0.3153 - val_wine_type_loss: 0.0246 - val_wine_quality_root_mean_squared_error: 0.5615 - val_wine_type_accuracy: 0.9949\n"
+     ]
+    }
+   ],
+   "source": [
+    "## Please uncomment all lines in this cell and replace those marked with `# YOUR CODE HERE`.\n",
+    "## You can select all lines in this code cell with Ctrl+A (Windows/Linux) or Cmd+A (Mac), then press Ctrl+/ (Windows/Linux) or Cmd+/ (Mac) to uncomment.\n",
+    "\n",
+    "\n",
+    "\n",
+    "history = model.fit(norm_train_X, train_Y,\n",
+    "                    epochs = 180, validation_data=(norm_val_X, val_Y))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 90,
+   "metadata": {
+    "deletable": false,
+    "editable": false,
+    "nbgrader": {
+     "cell_type": "code",
+     "checksum": "fadad8896eda9c8c2115970724b15508",
+     "grade": true,
+     "grade_id": "cell-eb4d5b41bef8f0ab",
+     "locked": true,
+     "points": 1,
+     "schema_version": 3,
+     "solution": false,
+     "task": false
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[92m All public tests passed\n"
+     ]
+    }
+   ],
+   "source": [
+    "utils.test_history(history)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 91,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "CubF2J2gSf6q"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "789/789 [==============================] - 0s 64us/sample - loss: 0.3403 - wine_quality_loss: 0.3153 - wine_type_loss: 0.0246 - wine_quality_root_mean_squared_error: 0.5615 - wine_type_accuracy: 0.9949\n",
+      "\n",
+      "loss: 0.3402570698348893\n",
+      "wine_quality_loss: 0.315312922000885\n",
+      "wine_type_loss: 0.024610469117760658\n",
+      "wine_quality_rmse: 0.5615354180335999\n",
+      "wine_type_accuracy: 0.9949302673339844\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Gather the training metrics\n",
+    "loss, wine_quality_loss, wine_type_loss, wine_quality_rmse, wine_type_accuracy = model.evaluate(x=norm_val_X, y=val_Y)\n",
+    "\n",
+    "print()\n",
+    "print(f'loss: {loss}')\n",
+    "print(f'wine_quality_loss: {wine_quality_loss}')\n",
+    "print(f'wine_type_loss: {wine_type_loss}')\n",
+    "print(f'wine_quality_rmse: {wine_quality_rmse}')\n",
+    "print(f'wine_type_accuracy: {wine_type_accuracy}')\n",
+    "\n",
+    "# EXPECTED VALUES\n",
+    "# ~ 0.30 - 0.38\n",
+    "# ~ 0.30 - 0.38\n",
+    "# ~ 0.018 - 0.030\n",
+    "# ~ 0.50 - 0.62\n",
+    "# ~ 0.97 - 1.0\n",
+    "\n",
+    "# Example:\n",
+    "#0.3657050132751465\n",
+    "#0.3463745415210724\n",
+    "#0.019330406561493874\n",
+    "#0.5885359048843384\n",
+    "#0.9974651336669922"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "gPtTGAP4usnm"
+   },
+   "source": [
+    "## Analyze the Model Performance\n",
+    "\n",
+    "Note that the model has two outputs. The output at index 0 is quality and index 1 is wine type\n",
+    "\n",
+    "So, round the quality predictions to the nearest integer."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 92,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "tBq9PEeAaW-Y"
+   },
+   "outputs": [],
+   "source": [
+    "predictions = model.predict(norm_test_X)\n",
+    "quality_pred = predictions[0]\n",
+    "type_pred = predictions[1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 93,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "YLhgTR4xTIxj"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[5.6690354]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(quality_pred[0])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# 5.6 - 6.0"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 94,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "MPi-eYfGTUXi"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[6.3664156e-05]\n",
+      "[0.9999981]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(type_pred[0])\n",
+    "print(type_pred[944])\n",
+    "\n",
+    "# EXPECTED OUTPUT\n",
+    "# A number close to zero\n",
+    "# A number close to or equal to 1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "Kohk-9C6vt_s"
+   },
+   "source": [
+    "### Plot Utilities\n",
+    "\n",
+    "We define a few utilities to visualize the model performance."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 95,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "62gEOFUhn6aQ"
+   },
+   "outputs": [],
+   "source": [
+    "def plot_metrics(metric_name, title, ylim=5):\n",
+    "    plt.title(title)\n",
+    "    plt.ylim(0,ylim)\n",
+    "    plt.plot(history.history[metric_name],color='blue',label=metric_name)\n",
+    "    plt.plot(history.history['val_' + metric_name],color='green',label='val_' + metric_name)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 96,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "6rfgSx7uz5dj"
+   },
+   "outputs": [],
+   "source": [
+    "def plot_confusion_matrix(y_true, y_pred, title='', labels=[0,1]):\n",
+    "    cm = confusion_matrix(y_true, y_pred)\n",
+    "    fig = plt.figure()\n",
+    "    ax = fig.add_subplot(111)\n",
+    "    cax = ax.matshow(cm)\n",
+    "    plt.title('Confusion matrix of the classifier')\n",
+    "    fig.colorbar(cax)\n",
+    "    ax.set_xticklabels([''] + labels)\n",
+    "    ax.set_yticklabels([''] + labels)\n",
+    "    plt.xlabel('Predicted')\n",
+    "    plt.ylabel('True')\n",
+    "    fmt = 'd'\n",
+    "    thresh = cm.max() / 2.\n",
+    "    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):\n",
+    "          plt.text(j, i, format(cm[i, j], fmt),\n",
+    "                  horizontalalignment=\"center\",\n",
+    "                  color=\"black\" if cm[i, j] > thresh else \"white\")\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 97,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "dfVLIqi017Vf"
+   },
+   "outputs": [],
+   "source": [
+    "def plot_diff(y_true, y_pred, title = '' ):\n",
+    "    plt.scatter(y_true, y_pred)\n",
+    "    plt.title(title)\n",
+    "    plt.xlabel('True Values')\n",
+    "    plt.ylabel('Predictions')\n",
+    "    plt.axis('equal')\n",
+    "    plt.axis('square')\n",
+    "    plt.plot([-100, 100], [-100, 100])\n",
+    "    return plt"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "8sd1jdFbwE0I"
+   },
+   "source": [
+    "### Plots for Metrics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 98,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "f3MwZ5J1pOfj"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plot_metrics('wine_quality_root_mean_squared_error', 'RMSE', ylim=2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 99,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "QIAxEezCppnd"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plot_metrics('wine_type_loss', 'Wine Type Loss', ylim=0.2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "uYV9AOAMwI9p"
+   },
+   "source": [
+    "### Plots for Confusion Matrix\n",
+    "\n",
+    "Plot the confusion matrices for wine type. You can see that the model performs well for prediction of wine type from the confusion matrix and the loss metrics."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 100,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "C3hvTYxIaf3n"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 2 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plot_confusion_matrix(test_Y[1], np.round(type_pred), title='Wine Type', labels = [0, 1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 101,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "GW91ym8P2I5y"
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "scatter_plot = plot_diff(test_Y[0], quality_pred, title='Type')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "colab": {
+   "include_colab_link": true,
+   "name": "exercise-answer.ipynb",
+   "provenance": []
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
